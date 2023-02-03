@@ -162,6 +162,14 @@ describe("Separate Pool", function () {
         "SeparatePool: NFT already released",
       );
     });
+
+    it("should succeed with correct mint amount given non-zero mint buffer", async function () {
+      // Increase F-X lock mint amount to 550
+      await this.sp.connect(this.signers.admin).setLockMintBuffer(su("50"));
+      // Lock NFT
+      await this.sp.connect(this.signers.bob).lock(10);
+      expect(await this.sp.balanceOf(this.signers.bob.address)).to.equal(su("550"));
+    });
   });
 
   context("Redeeming", async function () {
@@ -198,6 +206,26 @@ describe("Separate Pool", function () {
       await expect(this.sp.connect(this.signers.bob).redeem(10)).to.be.revertedWith(
         "SeparatePool: NFT has already been released to public pool.",
       );
+    });
+
+    it("should succeed with correct burn amount if mint buffer is unchanged", async function () {
+      // Increase F-X lock mint amount to 550
+      await this.sp.connect(this.signers.admin).setLockMintBuffer(su("50"));
+      // Lock NFT
+      await this.sp.connect(this.signers.bob).lock(10);
+      // Redeem NFT
+      await this.sp.connect(this.signers.bob).redeem(10);
+      expect(await this.sp.balanceOf(this.signers.bob.address)).to.equal(0);
+    });
+
+    it("should succeed with correct burn amount if mint buffer is changed", async function () {
+      // Lock NFT
+      await this.sp.connect(this.signers.bob).lock(10);
+      // Increase F-X lock mint amount to 550
+      await this.sp.connect(this.signers.admin).setLockMintBuffer(su("50"));
+      // Redeem NFT
+      await this.sp.connect(this.signers.bob).redeem(10);
+      expect(await this.sp.balanceOf(this.signers.bob.address)).to.equal(0);
     });
   });
 
@@ -241,6 +269,14 @@ describe("Separate Pool", function () {
       // Admin tries to release Bob's NFT, should fail
       await expect(this.sp.connect(this.signers.admin).release(10)).to.be.revertedWith(
         "SeparatePool: Release time not yet reached.",
+      );
+    });
+  });
+
+  context("Setting mint buffer", async function () {
+    it("should fail with new buffer amount greater than 100", async function () {
+      await expect(this.sp.connect(this.signers.admin).setLockMintBuffer(su("101"))).to.be.revertedWith(
+        "Buffer too large",
       );
     });
   });
