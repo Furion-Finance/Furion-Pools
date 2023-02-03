@@ -11,15 +11,16 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
     uint256 public constant SWAP_MINT_AMOUNT = 1000e18;
     uint256 public constant LOCK_MINT_AMOUNT = 500e18;
     uint256 public constant RELEASE_MINT_AMOUNT = 200e18;
+    uint256 lockMintBuffer;
 
     IERC20 FUR;
 
     address public immutable factory;
     address public immutable nft;
     // Transfer fee to income maker
-    address public immutable incomeMaker;
-    // Pool admin/fee receiver
     // Fees in this contract are in the form of F-* tokens
+    address public immutable incomeMaker;
+    // Pool admin
     address public owner;
 
     uint256 buyFee = 100e18;
@@ -28,9 +29,10 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
     struct LockInfo {
         address locker;
         bool extended; // Can only extend once
-        uint256 releaseTime;
+        uint128 releaseTime;
+        uint128 mintBuffer; // lockMintBuffer value WHEN NFT IS LOCKED
     }
-    mapping(bytes32 => LockInfo) public lockInfo;
+    mapping(uint256 => LockInfo) public lockInfo;
 
     constructor(
         address _nftAddress,
@@ -60,11 +62,9 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
     // Check if caller is NFT locker,
     //       if withdrawal is within release time
     modifier redeemable(uint256 _id) {
-        bytes32 fId = getFurionId(_id);
-
-        require(lockInfo[fId].locker == msg.sender, "SeparatePool: You did not lock this NFT.");
+        require(lockInfo[_id].locker == msg.sender, "SeparatePool: You did not lock this NFT.");
         require(
-            lockInfo[fId].releaseTime > block.timestamp,
+            lockInfo[_id].releaseTime > block.timestamp,
             "SeparatePool: NFT has already been released to public pool."
         );
         _;
@@ -73,41 +73,35 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
     // Check if NFT is locked,
     //       if releaseTime has passed
     modifier releasable(uint256 _id) {
-        bytes32 fId = getFurionId(_id);
-
-        require(lockInfo[fId].locker != address(0), "SeparatePool: NFT is not locked.");
-        require(lockInfo[fId].releaseTime < block.timestamp, "SeparatePool: Release time not yet reached.");
+        require(lockInfo[_id].locker != address(0), "SeparatePool: NFT is not locked.");
+        require(lockInfo[_id].releaseTime < block.timestamp, "SeparatePool: Release time not yet reached.");
         _;
-    }
-
-    /**
-     * @dev Compute NFT furion ID
-     */
-    function getFurionId(uint256 _id) public view returns (bytes32) {
-        return keccak256(abi.encodePacked(nft, _id));
     }
 
     /**
      * @dev Get complete lock info of NFT
      */
     function getLockInfo(uint256 _id) public view returns (LockInfo memory) {
-        bytes32 fId = getFurionId(_id);
-
-        return lockInfo[fId];
+        return lockInfo[_id];
     }
 
     /**
      * @dev Change fee rate for buying NFT after governance voting
      */
-    function setBuyFee(uint128 _newFee) external onlyOwner {
+    function setBuyFee(uint256 _newFee) external onlyOwner {
         buyFee = _newFee;
     }
 
     /**
      * @dev Change fee rate for locking NFT after governance voting
      */
-    function setLockFee(uint128 _newFee) external onlyOwner {
+    function setLockFee(uint256 _newFee) external onlyOwner {
         lockFee = _newFee;
+    }
+
+    function setLockMintBuffer(uint256 _newAmount) external onlyOwner {
+        require(_newAmount < 100e18 + 1, "Buffer too large");
+        lockMintBuffer = _newAmount;
     }
 
     /**
@@ -185,7 +179,7 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
      * @dev Lock NFT to pool for 30 days and get 500 pool tokens, paying 150 FUR as fees
      */
     function lock(uint256 _id) external {
-        _lock(_id, true);
+        _lock(_id, true, lockMintBuffer);
     }
 
     /**
@@ -196,13 +190,14 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
         uint256 length = _ids.length;
         require(length < 10, "SeparatePool: Can only buy 9 NFTs at once");
 
-        uint256 mintTotal = LOCK_MINT_AMOUNT * length;
+        uint256 _lockMintBuffer = lockMintBuffer;
+        uint256 mintTotal = (LOCK_MINT_AMOUNT + _lockMintBuffer) * length;
         uint256 feeTotal = lockFee * length;
         FUR.transferFrom(msg.sender, incomeMaker, feeTotal);
 
         for (uint256 i; i < length; ) {
             // Collected fee all at once, so _updateNow is false
-            _lock(_ids[i], false);
+            _lock(_ids[i], false, _lockMintBuffer);
 
             unchecked {
                 ++i;
@@ -217,9 +212,7 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
      * @dev EXTENDS release time by one month
      */
     function payFee(uint256 _id) external {
-        bytes32 fId = getFurionId(_id);
-
-        LockInfo memory li = lockInfo[fId];
+        LockInfo memory li = lockInfo[_id];
 
         require(li.locker == msg.sender, "SeparatePool: You did not lock this NFT.");
         require(li.releaseTime > block.timestamp, "SeparatePool: NFT already released");
@@ -227,8 +220,8 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
 
         FUR.transferFrom(msg.sender, incomeMaker, lockFee);
 
-        lockInfo[fId].extended = true;
-        lockInfo[fId].releaseTime += 30 days;
+        lockInfo[_id].extended = true;
+        lockInfo[_id].releaseTime += 30 days;
     }
 
     /**
@@ -236,15 +229,13 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
      * @dev Redeem locked NFT by paying 500 tokens
      */
     function redeem(uint256 _id) external redeemable(_id) {
-        bytes32 fId = getFurionId(_id);
+        _burn(msg.sender, LOCK_MINT_AMOUNT + lockInfo[_id].mintBuffer);
 
-        _burn(msg.sender, LOCK_MINT_AMOUNT);
-
-        delete lockInfo[fId];
+        delete lockInfo[_id];
 
         _transferOutNFT(nft, msg.sender, _id);
 
-        emit RedeemedNFT(fId, msg.sender);
+        emit RedeemedNFT(_id, msg.sender);
     }
 
     /**
@@ -252,16 +243,15 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
      * @dev Release NFT for swapping and mint pool tokens to locker
      */
     function release(uint256 _id) external onlyOwner releasable(_id) {
-        bytes32 fId = getFurionId(_id);
+        address sendRemainingTo = lockInfo[_id].locker;
+        uint256 mintBuffer = lockInfo[_id].mintBuffer;
 
-        address sendRemainingTo = lockInfo[fId].locker;
-
-        delete lockInfo[fId];
+        delete lockInfo[_id];
 
         _mint(sendRemainingTo, RELEASE_MINT_AMOUNT);
-        _mint(incomeMaker, LOCK_MINT_AMOUNT - RELEASE_MINT_AMOUNT);
+        _mint(incomeMaker, RELEASE_MINT_AMOUNT - mintBuffer);
 
-        emit ReleasedNFT(fId);
+        emit ReleasedNFT(_id);
     }
 
     function onERC721Received(address, address, uint256, bytes memory) public pure returns (bytes4) {
@@ -281,7 +271,7 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
             _mint(msg.sender, SWAP_MINT_AMOUNT);
         }
 
-        emit SoldNFT(getFurionId(_id), msg.sender);
+        emit SoldNFT(_id, msg.sender);
     }
 
     /**
@@ -299,24 +289,23 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
 
         _transferOutNFT(nft, msg.sender, _id);
 
-        emit BoughtNFT(getFurionId(_id), msg.sender);
+        emit BoughtNFT(_id, msg.sender);
     }
 
-    function _lock(uint256 _id, bool _updateNow) private {
+    function _lock(uint256 _id, bool _updateNow, uint256 _lockMintBuffer) private {
         _transferInNFT(nft, _id);
 
         if (_updateNow) {
             FUR.transferFrom(msg.sender, incomeMaker, lockFee);
 
-            _mint(msg.sender, LOCK_MINT_AMOUNT);
+            _mint(msg.sender, LOCK_MINT_AMOUNT + _lockMintBuffer);
         }
 
-        bytes32 fId = getFurionId(_id);
+        lockInfo[_id].locker = msg.sender;
+        uint256 releaseTime = block.timestamp + 30 * 24 * 3600;
+        lockInfo[_id].releaseTime = uint128(releaseTime);
+        lockInfo[_id].mintBuffer = uint128(_lockMintBuffer);
 
-        lockInfo[fId].locker = msg.sender;
-        uint256 _releaseTime = block.timestamp + 30 * 24 * 60 * 60;
-        lockInfo[fId].releaseTime = _releaseTime;
-
-        emit LockedNFT(fId, msg.sender, block.timestamp, _releaseTime);
+        emit LockedNFT(_id, msg.sender, block.timestamp, releaseTime);
     }
 }
