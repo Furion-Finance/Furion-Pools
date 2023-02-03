@@ -11,8 +11,10 @@ dotenvConfig({ path: resolve(__dirname, dotenvConfigPath) });
 
 // Ensure that we have all the environment variables we need.
 const mnemonic: string | undefined = process.env.MNEMONIC;
-if (!mnemonic) {
-  throw new Error("Please set your MNEMONIC in a .env file");
+const privateKey: string | undefined = process.env.PRIVATE_KEY;
+
+if (!privateKey && !mnemonic) {
+  throw new Error("Please set your PRIVATE_KEY or MNEMONIC in a .env file");
 }
 
 const infuraApiKey: string | undefined = process.env.INFURA_API_KEY;
@@ -46,11 +48,7 @@ function getChainConfig(chain: keyof typeof chainIds): NetworkUserConfig {
       jsonRpcUrl = "https://" + chain + ".infura.io/v3/" + infuraApiKey;
   }
   return {
-    accounts: {
-      count: 10,
-      mnemonic,
-      path: "m/44'/60'/0'/0",
-    },
+    accounts: [`${privateKey}`],
     chainId: chainIds[chain],
     url: jsonRpcUrl,
   };
@@ -76,6 +74,7 @@ const config: HardhatUserConfig = {
     enabled: process.env.REPORT_GAS ? true : false,
     excludeContracts: [],
     src: "./contracts",
+    coinmarketcap: process.env.CMC,
   },
   networks: {
     hardhat: {
