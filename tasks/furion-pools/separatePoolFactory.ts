@@ -32,33 +32,3 @@ task("create:SeparatePool", "Create seaparate pool")
     ];
     writeSeparatePool(network, poolName.substring(indexOfSpace + 1), poolAddress, args);
   });
-
-task("create:CoolSeparatePool", "Create Cool Cats seaparate pool").setAction(async function (
-  taskArguments: TaskArguments,
-  { ethers },
-) {
-  const network = getNetwork();
-  const addressList = readAddressList();
-
-  const spf = await ethers.getContractAt("SeparatePoolFactory", addressList[network].SeparatePoolFactory);
-  const poolAddress = await spf.callStatic.createPool(addressList[network].CoolCats);
-  const tx = await spf.createPool(addressList[network].CoolCats);
-  await tx.wait();
-  console.log();
-  console.log(`Cool Cats separate pool deployed to ${poolAddress} on ${network}`);
-
-  const sp = await ethers.getContractAt("SeparatePool", poolAddress);
-  const poolSymbol = await sp.symbol();
-  const poolName = await sp.name();
-  const indexOfSpace = poolName.indexOf(" ");
-  const signers = await ethers.getSigners();
-  const args = [
-    addressList[network].CoolCats,
-    addressList[network].IncomeMaker,
-    addressList[network].FurionToken,
-    signers[0].address,
-    poolName,
-    poolSymbol,
-  ];
-  writeSeparatePool(network, poolName.substring(indexOfSpace + 1), poolAddress, args);
-});
