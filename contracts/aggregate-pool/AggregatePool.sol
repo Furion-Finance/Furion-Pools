@@ -7,23 +7,23 @@ import "./interfaces/IFurionPricingOracle.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "../utils/TransferNFT.sol";
-import "hardhat/console.sol";
 
-contract AggregatePool is ERC20Permit, TransferNFT, IERC721Receiver, IAggregatePool {
+contract AggregatePool is ERC20Permit, TransferNFT, IAggregatePool {
     IERC20 FUR;
     IFurionPricingOracle oracle;
 
     address public immutable factory;
     address public immutable incomeMaker;
-    address public owner;
-    // Serves as ID for nfts in this pool (ID for next nft to be registered)
-    // Starts at 1
-    uint256 public types;
 
     uint256 buyFee = 100e18;
     uint256 lockFee = 150e18;
+
+    address public owner;
+
+    // Serves as ID for nfts in this pool (ID for next nft to be registered)
+    // Starts at 1
+    uint256 public types;
 
     // Accepted nfts for this aggregate pool
     mapping(address => bool) public registered;
@@ -256,7 +256,6 @@ contract AggregatePool is ERC20Permit, TransferNFT, IERC721Receiver, IAggregateP
     }
 
     function buyBatch(address _nft, uint256[] calldata _ids) external {
-        console.log("buyBatch");
         require(_ids.length < 10, "AP: Buy limit per tx reached");
         _collectFee(buyFee * _ids.length);
 

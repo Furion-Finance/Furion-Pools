@@ -7,24 +7,28 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ISeparatePool.sol";
 import "../utils/TransferNFT.sol";
 
-contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
+contract SeparatePool is ERC20Permit, TransferNFT, ISeparatePool {
+    IERC20 FUR;
+
     uint256 public constant SWAP_MINT_AMOUNT = 1000e18;
     uint256 public constant LOCK_MINT_AMOUNT = 500e18;
     uint256 public constant RELEASE_MINT_AMOUNT = 200e18;
-    uint256 lockMintBuffer;
-
-    IERC20 FUR;
 
     address public immutable factory;
     address public immutable nft;
     // Transfer fee to income maker
     // Fees in this contract are in the form of F-* tokens
     address public immutable incomeMaker;
-    // Pool admin
-    address public owner;
 
+    // Amount of F-X to mint on top of just 500 when locking
+    uint256 lockMintBuffer;
+
+    // Amount of FUR to pay
     uint256 buyFee = 100e18;
     uint256 lockFee = 150e18;
+
+    // Pool admin
+    address public owner;
 
     struct LockInfo {
         address locker;
@@ -254,10 +258,6 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
         emit ReleasedNFT(_id);
     }
 
-    function onERC721Received(address, address, uint256, bytes memory) public pure returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
-
     /**
      * @dev Sell NFT to pool and get 1000 pool tokens
      *
@@ -307,5 +307,9 @@ contract SeparatePool is ERC20Permit, ISeparatePool, TransferNFT {
         lockInfo[_id].mintBuffer = uint128(_lockMintBuffer);
 
         emit LockedNFT(_id, msg.sender, block.timestamp, releaseTime);
+    }
+
+    function onERC721Received(address, address, uint256, bytes memory) public pure returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

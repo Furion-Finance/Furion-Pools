@@ -20,25 +20,23 @@ contract FractionalAggregatePool is ERC20Permit, IFractionalAggregatePool {
 
     address public immutable factory;
     address public immutable incomeMaker;
+
+    // Access all tokens for calculating sum of F-* reference price
+    // ID to token address
+    mapping(uint256 => address) private getToken;
+
     // Will be immutable for income sharing vault
     // Fees in this contract are in the form of FFT
     address public owner;
 
     // Accepted pool tokens for this root pool
     mapping(address => bool) public registered;
-    // Access all tokens for calculating sum of F-* reference price
-    // ID to token address
-    mapping(uint256 => address) private getToken;
 
     // Fees in FUR
     uint256 public stakeFee = 100e18;
     uint256 public unstakeFee = 100e18;
     // Serves as ID for F-* tokens in this pool (ID for next token to be registered)
     uint256 public tokenTypes;
-
-    event RegisteredToken(address tokenAddress);
-    event StakedToken(address indexed tokenAddress, address indexed staker, uint256 tokenAmount);
-    event UnstakedToken(address indexed tokenAddress, address indexed unstaker, uint256 tokenAmount);
 
     constructor(
         address _incomeMaker,
@@ -94,6 +92,47 @@ contract FractionalAggregatePool is ERC20Permit, IFractionalAggregatePool {
         return totalSupply();
     }
 
+    /**
+     * @dev Get total value of all staked F-* tokens in this pool (in ETH)
+     *
+     * @return Total value scaled by 1e18
+     */
+    function refPriceSum(address _tokenAddress) public view returns (uint256) {
+        uint256 sum;
+
+        for (uint256 i; i < tokenTypes; ) {
+            address token = getToken[i];
+
+            uint256 refPrice = _refPricePerToken(_tokenAddress);
+            // Number of F-* tokens in the contract
+            uint256 balance = IERC20(token).balanceOf(address(this));
+
+            sum += refPrice * balance;
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        return sum;
+    }
+
+    /**
+     * @dev Get reference price of 1 FFT (in ETH)
+     *
+     * @return Price of 1 FFT enlarged by MULTIPLIER
+     */
+    function refPricePerFFT(address _tokenAddress) public view returns (uint256) {
+        uint256 _circulatingSupply = circulatingSupply();
+
+        // For first mint
+        if (_circulatingSupply == 0) {
+            return 0.01 ether;
+        } else {
+            return refPriceSum(_tokenAddress) / _circulatingSupply;
+        }
+    }
+
     function setStakeFee(uint256 _newStakeFee) external onlyOwner {
         stakeFee = _newStakeFee;
     }
@@ -103,7 +142,7 @@ contract FractionalAggregatePool is ERC20Permit, IFractionalAggregatePool {
     }
 
     /**
-     * @dev Change pool admin/fee receiver
+     * @dev Change pool admin
      */
     function changeOwner(address _newOwner) external onlyFactory {
         owner = _newOwner;
@@ -133,7 +172,7 @@ contract FractionalAggregatePool is ERC20Permit, IFractionalAggregatePool {
     function stake(address _tokenAddress, uint256 _amount) external tokenRegistered(_tokenAddress) {
         // Both are enlarged by MULTIPLIER which cancels out in mint amount calculation
         uint256 tokenRefPrice = _refPricePerToken(_tokenAddress);
-        uint256 fftRefPrice = _refPricePerFFT(_tokenAddress);
+        uint256 fftRefPrice = refPricePerFFT(_tokenAddress);
         // Amount of FFT to get before fee
         uint256 mintAmount = (_amount * tokenRefPrice) / fftRefPrice;
 
@@ -156,7 +195,7 @@ contract FractionalAggregatePool is ERC20Permit, IFractionalAggregatePool {
     function unstake(address _tokenAddress, uint256 _amount) external tokenRegistered(_tokenAddress) {
         // Both are enlarged by MULTIPLIER which cancels out in retrieve amount calculation
         uint256 tokenRefPrice = _refPricePerToken(_tokenAddress);
-        uint256 fftRefPrice = _refPricePerFFT(_tokenAddress);
+        uint256 fftRefPrice = refPricePerFFT(_tokenAddress);
 
         // Amount of F-* tokens to get back
         uint256 retrieveAmount = (_amount * fftRefPrice) / tokenRefPrice;
@@ -186,46 +225,5 @@ contract FractionalAggregatePool is ERC20Permit, IFractionalAggregatePool {
 
         // (refPrice / (1000 * 1e18)) * MULTIPLIER = (refPrice / 1000) * (MULTIPLIER / MULTIPLIER)
         return refPrice / 1000;
-    }
-
-    /**
-     * @dev Get total value of all staked F-* tokens in this pool (in ETH)
-     *
-     * @return Total value scaled by 1e18
-     */
-    function _refPriceSum(address _tokenAddress) private view returns (uint256) {
-        uint256 sum;
-
-        for (uint256 i; i < tokenTypes; ) {
-            address token = getToken[i];
-
-            uint256 refPrice = _refPricePerToken(_tokenAddress);
-            // Number of F-* tokens in the contract
-            uint256 balance = IERC20(token).balanceOf(address(this));
-
-            sum += refPrice * balance;
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        return sum;
-    }
-
-    /**
-     * @dev Get reference price of 1 FFT (in ETH)
-     *
-     * @return Price of 1 FFT enlarged by MULTIPLIER
-     */
-    function _refPricePerFFT(address _tokenAddress) private view returns (uint256) {
-        uint256 _circulatingSupply = circulatingSupply();
-
-        // For first mint
-        if (_circulatingSupply == 0) {
-            return 0.01 ether;
-        } else {
-            return _refPriceSum(_tokenAddress) / _circulatingSupply;
-        }
     }
 }

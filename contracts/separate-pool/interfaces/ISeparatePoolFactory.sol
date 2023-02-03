@@ -3,6 +3,8 @@
 pragma solidity ^0.8.0;
 
 interface ISeparatePoolFactory {
+    event PoolCreated(address nftAddress, address poolAddress, uint256 poolIndex);
+
     function numOfPools() external view returns (uint256 totalPools);
 
     function getAllNfts() external view returns (address[] memory nftsWithPool);

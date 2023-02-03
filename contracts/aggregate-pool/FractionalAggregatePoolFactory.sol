@@ -8,25 +8,22 @@ import "./interfaces/IAggregatePoolFactory.sol";
 import "../IChecker.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "hardhat/console.sol";
 
-contract FractionalAggregatePoolFactory is Ownable {
-    address public fur;
-    address public oracle;
+contract FractionalAggregatePoolFactory is IAggregatePoolFactory, Ownable {
     address public immutable incomeMaker;
     address public immutable checker;
     address public immutable spFactory;
+
+    address public fur;
+    address public oracle;
 
     // Starts from 0
     uint256 public nextId;
     // Pool ID to pool address
     mapping(uint256 => address) public getPool;
-    //mapping(bytes32 => bool) private alreadyExist;
 
     // No use for now
     // address[] public allPools;
-
-    event PoolCreated(address poolAddress, uint256 id);
 
     constructor(address _incomeMaker, address _checker, address _fur, address _oracle, address _spFactory) {
         incomeMaker = _incomeMaker;
@@ -83,12 +80,8 @@ contract FractionalAggregatePoolFactory is Ownable {
     ) external returns (address poolAddress) {
         require(checker != address(0), "AggregatePoolFactory: Checker not set.");
 
-        // Act as identifier for pools to ensure no duplications
         bytes32 _salt = keccak256(abi.encodePacked(_tokens));
-        /*require(
-            !alreadyExist[_salt],
-            "AggregatePoolFactory: Root pool for these NFTs already exists."
-        );*/
+
         poolAddress = address(
             new FractionalAggregatePool{ salt: _salt }(
                 incomeMaker,
@@ -103,8 +96,7 @@ contract FractionalAggregatePoolFactory is Ownable {
         );
 
         getPool[nextId] = poolAddress;
-        // Only tracks token list at the time of creation, useless
-        //alreadyExist[_salt] = true;
+
         IChecker(checker).addToken(poolAddress);
 
         emit PoolCreated(poolAddress, nextId++);

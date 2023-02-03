@@ -2,7 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-interface IAggregatePool {
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+
+interface IAggregatePool is IERC721Receiver {
     function factory() external view returns (address);
 
     function owner() external view returns (address);

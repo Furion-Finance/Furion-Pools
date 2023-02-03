@@ -3,6 +3,10 @@
 pragma solidity ^0.8.0;
 
 interface IFractionalAggregatePool {
+    event RegisteredToken(address tokenAddress);
+    event StakedToken(address indexed tokenAddress, address indexed staker, uint256 tokenAmount);
+    event UnstakedToken(address indexed tokenAddress, address indexed unstaker, uint256 tokenAmount);
+
     function factory() external view returns (address);
 
     function owner() external view returns (address);

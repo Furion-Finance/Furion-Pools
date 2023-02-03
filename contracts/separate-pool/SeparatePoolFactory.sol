@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SeparatePoolFactory is ISeparatePoolFactory, Ownable {
+    IChecker Checker;
+
     address public immutable incomeMaker;
 
     // Addresses of NFTs with a pool
@@ -17,10 +19,7 @@ contract SeparatePoolFactory is ISeparatePoolFactory, Ownable {
     // NFT address to pool address
     mapping(address => address) public getPool;
 
-    IChecker Checker;
     address public fur;
-
-    event PoolCreated(address nftAddress, address poolAddress, uint256 poolIndex);
 
     constructor(address _incomeMaker, address _checker, address _fur) {
         incomeMaker = _incomeMaker;
@@ -54,7 +53,7 @@ contract SeparatePoolFactory is ISeparatePoolFactory, Ownable {
         return poolAddresses;
     }
 
-    function getNftByPool(address _poolAddress) public view returns (address) {
+    function getNftByPool(address _poolAddress) external view returns (address) {
         for (uint256 i; i < allNfts.length; ) {
             if (getPool[allNfts[i]] == _poolAddress) {
                 return allNfts[i];
@@ -85,7 +84,7 @@ contract SeparatePoolFactory is ISeparatePoolFactory, Ownable {
         }
     }
 
-    function setFur(address _newFur) public onlyOwner {
+    function setFur(address _newFur) external onlyOwner {
         for (uint256 i; i < allNfts.length; ) {
             ISeparatePool(getPool[allNfts[i]]).setFur(_newFur);
 

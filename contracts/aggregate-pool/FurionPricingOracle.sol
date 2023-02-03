@@ -4,8 +4,9 @@ pragma solidity ^0.8.0;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "./interfaces/IFurionPricingOracle.sol";
 
-contract FurionPricingOracle is Ownable {
+contract FurionPricingOracle is IFurionPricingOracle, Ownable {
     mapping(bytes32 => AggregatorV3Interface) priceFeed;
 
     mapping(address => uint256[]) public prices;
@@ -14,8 +15,6 @@ contract FurionPricingOracle is Ownable {
     // NFT token address to token id to price
     mapping(address => mapping(uint256 => uint256)) public priceLevel;
     mapping(address => bytes32) public quoteToken;
-
-    event PriceUpdated(address token, uint256 level, uint256 price);
 
     function setPriceFeed(string calldata _name, address _feed) external onlyOwner {
         bytes32 tokenId = keccak256(abi.encodePacked(_name));

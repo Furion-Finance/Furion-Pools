@@ -3,6 +3,8 @@
 pragma solidity ^0.8.0;
 
 interface IAggregatePoolFactory {
+    event PoolCreated(address poolAddress, uint256 id);
+
     function oracle() external view returns (address);
 
     function getPool(uint256 _poolId) external view returns (address);
