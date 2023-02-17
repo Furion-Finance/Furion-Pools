@@ -355,6 +355,7 @@ contract AggregatePool is ERC20Permit, TransferNFT, IAggregatePool {
         if (_updateNow) {
             _collectFee(lockFee);
             _mint(msg.sender, mintAmount);
+            _mint(address(this), mintAmount);
         }
 
         bytes32 fId = getFurionId(_nft, _id);
