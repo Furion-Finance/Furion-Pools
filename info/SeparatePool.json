@@ -1,4 +1,29 @@
 {
   "localhost": [],
-  "goerli": []
+  "goerli": [
+    {
+      "name": "BAYC",
+      "address": "0x1d4331610d6ce09BE1B57238F39f6BD80D0F8faf"
+    },
+    {
+      "name": "BAKC",
+      "address": "0x3C2cd2c3f21361BaE706EaDdD5A4032116A94b99"
+    },
+    {
+      "name": "Meebits",
+      "address": "0x7DA665588e7e652D17be3FC7CEe61E85740558c7"
+    },
+    {
+      "name": "Cool Cats",
+      "address": "0x9E6F255C24112B2058dB2eaC3BF7e83deD1e7e20"
+    },
+    {
+      "name": "mfer",
+      "address": "0xEe7e9AB87425c94eE628Cec03F655c7C06E4cee8"
+    },
+    {
+      "name": "Pudgy Penguins",
+      "address": "0xeDd853525BE17a9EdF7c8C52AeAd3D3143624918"
+    }
+  ]
 }

@@ -1,4 +1,20 @@
 {
   "localhost": [],
-  "goerli": []
+  "goerli": [
+    {
+      "name": "BAYC Ecosystem",
+      "symbol": "FFT-BAYC",
+      "address": "0x324d6FeFDAf7A08f05c50BaF5B2c546f7823b105"
+    },
+    {
+      "name": "Bluechips",
+      "symbol": "FFT-BLUECHIP",
+      "address": "0x98A85411367337206D5aB6F487656a2C8A68622a"
+    },
+    {
+      "name": "Dark Horses",
+      "symbol": "FFT-DARKHORSE",
+      "address": "0x3Ef9Ed6e00F317B981C93Ef2E1e394781B798Ef2"
+    }
+  ]
 }
