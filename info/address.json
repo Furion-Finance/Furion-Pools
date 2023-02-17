@@ -1,4 +1,11 @@
 {
   "localhost": {},
-  "goerli": {}
+  "goerli": {
+    "FurionToken": "0x167873d27d6f16C503A694814a3895215344B601",
+    "IncomeMaker": "0xA10f8ecb4d91Ae5CA3291d0bFF159bd5F882A5f5",
+    "Checker": "0x552b2907e17627Fee4e4dD894417ce5fBC14150F",
+    "FurionPricingOracle": "0xA33Ff9a6B524680AEE0Df4eE56EBB53CBd94C4e9",
+    "SeparatePoolFactory": "0xc8b5573B7Ccbd0FF0e7840d98f0B771B54a23EE8",
+    "AggregatePoolFactory": "0xA9d5633b94B42daDb0b965941d80029972A41210"
+  }
 }
