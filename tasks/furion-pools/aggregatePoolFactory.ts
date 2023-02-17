@@ -6,8 +6,8 @@ import { getNetwork, writeAggregatePool } from "../helpers";
 
 task("create:AggregatePool", "Create aggregate pool")
   .addVariadicPositionalParam("nfts", "Addresses of separate pools to be included in the pool")
-  .addParam("name", "Name of the FFT token")
-  .addParam("symbol", "Symbol of FFT token")
+  .addParam("name", "Name of the pool")
+  .addParam("symbol", "Symbol of pool")
   .setAction(async function (taskArguments: TaskArguments, { ethers }) {
     const network = getNetwork();
     const addressList = readAddressList();
