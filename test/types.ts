@@ -4,11 +4,17 @@ import type {
   AggregatePool,
   AggregatePoolFactory,
   Checker,
+  FErc20,
+  FEther,
   FractionalAggregatePool,
   FurionToken,
+  JumpInterestRateModel,
   MockERC721,
+  NormalInterestRateModel,
+  RiskManager,
   SeparatePool,
   SeparatePoolFactory,
+  SimplePriceOracle,
 } from "../src/types";
 
 type Fixture<T> = () => Promise<T>;
@@ -26,6 +32,13 @@ declare module "mocha" {
     fap: FractionalAggregatePool;
     checker: Checker;
     fur: FurionToken;
+    ferc: FErc20;
+    feth: FEther;
+    ffur: FErc20;
+    nirm: NormalInterestRateModel;
+    jirm: JumpInterestRateModel;
+    rm: RiskManager;
+    spo: SimplePriceOracle;
     loadFixture: <T>(fixture: Fixture<T>) => Promise<T>;
     signers: Signers;
   }
